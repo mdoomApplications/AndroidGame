@@ -1,0 +1,24 @@
+
+
+name: Auto Create PR
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  create_pr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Create Pull Request
+        uses: actions/create-pull-request@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          target: main
+          title: "[Auto PR] Merge changes from develop to main"
+          body: "This PR was automatically created by GitHub Actions."
+
