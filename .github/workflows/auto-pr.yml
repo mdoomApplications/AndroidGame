@@ -20,5 +20,5 @@ jobs:
         with:
           target: main
           title: "[Auto PR] Merge changes from develop to main"
-          body: "This PR was automatically created by GitHub Actions. Updated."
+          body: "This PR was automatically created by GitHub Actions. Updated. Again. And again."
 
