@@ -1,0 +1,30 @@
+
+
+<![CDATA[<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:id="@+id/playerNameTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="20sp"
+        android:text="Player Name" />
+
+    <Button
+        android:id="@+id/learnReadButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/learn_read" />
+
+    <Button
+        android:id="@+id/learnCountButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/learn_count" />
+
+</LinearLayout>
+]]>
+
