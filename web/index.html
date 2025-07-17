@@ -1,26 +1,509 @@
 <!DOCTYPE html>
-<html>
+<html lang="cs">
 <head>
-  <base href="$FLUTTER_BASE_HREF">
-  <meta charset="UTF-8">
-  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="Dragon Tamagotchi - virtuální dráček pro děti">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="Dragon Tamagotchi">
-  <link rel="apple-touch-icon" href="icons/Icon-192.png">
-  <link rel="icon" type="image/png" href="favicon.png"/>
-  <title>Dragon Tamagotchi</title>
-  <link rel="manifest" href="manifest.json">
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('flutter-first-frame', function () {
-        navigator.serviceWorker.register('flutter_service_worker.js');
-      });
-    }
-  </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🐉 Dragon Tamagotchi 🐉</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #87CEEB 0%, #98FB98 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 24px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .dragon {
+            font-size: 100px;
+            margin: 20px 0;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            user-select: none;
+        }
+        
+        .dragon:hover {
+            transform: scale(1.1);
+        }
+        
+        .dragon:active {
+            transform: scale(0.95);
+        }
+        
+        input {
+            width: 100%;
+            padding: 15px;
+            font-size: 18px;
+            border: 3px solid #3498db;
+            border-radius: 10px;
+            text-align: center;
+            margin: 15px 0;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+        
+        input:focus {
+            border-color: #2980b9;
+        }
+        
+        button {
+            width: 100%;
+            padding: 15px;
+            font-size: 18px;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            margin: 10px 0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            color: white;
+        }
+        
+        .btn-create { background: #3498db; }
+        .btn-feed { background: #27ae60; }
+        .btn-drink { background: #2980b9; }
+        .btn-math { background: #9b59b6; }
+        .btn-restart { background: #e74c3c; }
+        
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .stats {
+            margin: 20px 0;
+        }
+        
+        .stat {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 15px 0;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        
+        .stat-label {
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        .stat-bar {
+            flex: 1;
+            height: 20px;
+            background: #ddd;
+            border-radius: 10px;
+            margin: 0 15px;
+            overflow: hidden;
+        }
+        
+        .stat-fill {
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.5s ease;
+        }
+        
+        .hunger-fill { background: #e74c3c; }
+        .thirst-fill { background: #3498db; }
+        .mood-fill { background: #27ae60; }
+        
+        .stat-value {
+            font-weight: bold;
+            font-size: 16px;
+            min-width: 40px;
+        }
+        
+        .info-bar {
+            display: flex;
+            justify-content: space-between;
+            margin: 20px 0;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        .coins {
+            background: #f39c12;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+        }
+        
+        .age {
+            background: #9b59b6;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+        }
+        
+        .screen {
+            display: none;
+        }
+        
+        .screen.active {
+            display: block;
+        }
+        
+        .hatch-screen {
+            text-align: center;
+        }
+        
+        .countdown {
+            font-size: 48px;
+            font-weight: bold;
+            color: #e74c3c;
+            margin: 20px 0;
+        }
+        
+        .game-over {
+            color: #e74c3c;
+            font-size: 20px;
+            margin: 20px 0;
+        }
+        
+        @media (max-width: 480px) {
+            .container {
+                padding: 20px;
+                margin: 10px;
+            }
+            
+            .dragon {
+                font-size: 80px;
+            }
+            
+            h1 {
+                font-size: 20px;
+            }
+            
+            button, input {
+                font-size: 16px;
+            }
+        }
+    </style>
 </head>
 <body>
-  <script src="flutter.js" defer></script>
+    <div class="container">
+        <!-- Úvodní obrazovka -->
+        <div id="start-screen" class="screen active">
+            <h1>🐉 DRAGON TAMAGOTCHI 🐉</h1>
+            <div class="dragon" onclick="wiggleEgg()">🥚</div>
+            <input type="text" id="dragon-name" placeholder="ZADEJ JMÉNO DRÁČKA" maxlength="12">
+            <button class="btn-create" onclick="startGame()">VYTVOŘIT DRÁČKA</button>
+        </div>
+        
+        <!-- Líhnutí -->
+        <div id="hatch-screen" class="screen hatch-screen">
+            <h1 id="hatch-title">🐉 LÍHNUTÍ 🐉</h1>
+            <div class="dragon" onclick="hatchDragon()" id="egg-hatch">🥚</div>
+            <div class="countdown" id="countdown">3</div>
+            <p>Klikni na vejce pro vylíhnutí!</p>
+        </div>
+        
+        <!-- Hlavní hra -->
+        <div id="game-screen" class="screen">
+            <h1 id="game-title">🐉 DRÁČEK 🐉</h1>
+            
+            <div class="info-bar">
+                <div class="age">Věk: <span id="age">0</span> dní</div>
+                <div class="coins">🪙 <span id="coins">15</span></div>
+            </div>
+            
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-label">🍖 HLAD</div>
+                    <div class="stat-bar">
+                        <div class="stat-fill hunger-fill" id="hunger-bar" style="width: 100%"></div>
+                    </div>
+                    <div class="stat-value" id="hunger-value">100</div>
+                </div>
+                
+                <div class="stat">
+                    <div class="stat-label">💧 ŽÍZEŇ</div>
+                    <div class="stat-bar">
+                        <div class="stat-fill thirst-fill" id="thirst-bar" style="width: 100%"></div>
+                    </div>
+                    <div class="stat-value" id="thirst-value">100</div>
+                </div>
+                
+                <div class="stat">
+                    <div class="stat-label">😊 NÁLADA</div>
+                    <div class="stat-bar">
+                        <div class="stat-fill mood-fill" id="mood-bar" style="width: 100%"></div>
+                    </div>
+                    <div class="stat-value" id="mood-value">100</div>
+                </div>
+            </div>
+            
+            <div class="dragon" onclick="petDragon()" id="main-dragon">🐉</div>
+            
+            <button class="btn-math" onclick="playMath()">POČÍTÁNÍ (+2🪙)</button>
+            <button class="btn-feed" onclick="feedDragon()">NAKRMIT (-8🪙)</button>
+            <button class="btn-drink" onclick="giveDrink()">NAPOJIT (-5🪙)</button>
+            <button class="btn-restart" onclick="restartGame()">RESTART</button>
+        </div>
+        
+        <!-- Game Over -->
+        <div id="gameover-screen" class="screen">
+            <h1 style="color: #e74c3c;">💀 KONEC HRY 💀</h1>
+            <div class="dragon">💀</div>
+            <div class="game-over" id="death-reason">Dráček zemřel!</div>
+            <button class="btn-restart" onclick="restartGame()">HRÁT ZNOVU</button>
+        </div>
+    </div>
+
+    <script>
+        // Herní stav
+        let gameState = {
+            dragonName: '',
+            hunger: 100,
+            thirst: 100,
+            mood: 100,
+            coins: 15,
+            age: 0,
+            isAlive: true,
+            gameTimer: null
+        };
+
+        // Zobrazení obrazovky
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.remove('active');
+            });
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        // Animace vejce
+        function wiggleEgg() {
+            const egg = document.querySelector('#start-screen .dragon');
+            egg.style.transform = 'scale(1.2) rotate(5deg)';
+            setTimeout(() => {
+                egg.style.transform = 'scale(1) rotate(0deg)';
+            }, 200);
+        }
+
+        // Start hry
+        function startGame() {
+            const nameInput = document.getElementById('dragon-name');
+            const name = nameInput.value.trim().toUpperCase();
+            
+            if (!name || name.length < 2) {
+                alert('ZADEJ JMÉNO DRÁČKA! (alespoň 2 znaky)');
+                return;
+            }
+            
+            gameState.dragonName = name;
+            document.getElementById('hatch-title').textContent = `🐉 ${name} SE LÍHNE 🐉`;
+            showScreen('hatch-screen');
+            
+            // Odpočítávání
+            let count = 3;
+            const countdownEl = document.getElementById('countdown');
+            const countdownTimer = setInterval(() => {
+                count--;
+                countdownEl.textContent = count;
+                
+                if (count <= 0) {
+                    clearInterval(countdownTimer);
+                    countdownEl.textContent = 'KLIKNI!';
+                    countdownEl.style.color = '#27ae60';
+                }
+            }, 1000);
+        }
+
+        // Vylíhnutí
+        function hatchDragon() {
+            const countdownEl = document.getElementById('countdown');
+            if (countdownEl.textContent !== 'KLIKNI!') return;
+            
+            document.getElementById('game-title').textContent = `🐉 ${gameState.dragonName} 🐉`;
+            showScreen('game-screen');
+            updateDisplay();
+            startGameLoop();
+        }
+
+        // Herní smyčka
+        function startGameLoop() {
+            gameState.gameTimer = setInterval(() => {
+                if (!gameState.isAlive) return;
+                
+                // Snížení statistik
+                gameState.hunger = Math.max(0, gameState.hunger - 2);
+                gameState.thirst = Math.max(0, gameState.thirst - 2.5);
+                gameState.mood = Math.max(0, gameState.mood - 1);
+                
+                // Přidání věku
+                if (Math.random() < 0.15) {
+                    gameState.age++;
+                }
+                
+                updateDisplay();
+                checkGameOver();
+            }, 5000); // Každých 5 sekund
+        }
+
+        // Aktualizace zobrazení
+        function updateDisplay() {
+            document.getElementById('hunger-value').textContent = Math.round(gameState.hunger);
+            document.getElementById('thirst-value').textContent = Math.round(gameState.thirst);
+            document.getElementById('mood-value').textContent = Math.round(gameState.mood);
+            document.getElementById('coins').textContent = gameState.coins;
+            document.getElementById('age').textContent = gameState.age;
+            
+            document.getElementById('hunger-bar').style.width = gameState.hunger + '%';
+            document.getElementById('thirst-bar').style.width = gameState.thirst + '%';
+            document.getElementById('mood-bar').style.width = gameState.mood + '%';
+            
+            // Změna dráčka podle nálady
+            const dragon = document.getElementById('main-dragon');
+            if (gameState.mood > 70) {
+                dragon.textContent = '🐉';
+            } else if (gameState.mood > 30) {
+                dragon.textContent = '😐';
+            } else {
+                dragon.textContent = '😢';
+            }
+        }
+
+        // Kontrola konce hry
+        function checkGameOver() {
+            if (gameState.hunger <= 0 || gameState.thirst <= 0 || gameState.mood <= 0) {
+                gameState.isAlive = false;
+                clearInterval(gameState.gameTimer);
+                
+                let reason = 'DRÁČEK ZEMŘEL ';
+                if (gameState.hunger <= 0) reason += 'HLADY! 🍖';
+                else if (gameState.thirst <= 0) reason += 'ŽÍZNÍ! 💧';
+                else reason += 'SMUTKEM! 😢';
+                
+                document.getElementById('death-reason').textContent = reason;
+                showScreen('gameover-screen');
+            }
+        }
+
+        // Pohladit dráčka
+        function petDragon() {
+            if (!gameState.isAlive) return;
+            
+            gameState.mood = Math.min(100, gameState.mood + 8);
+            updateDisplay();
+            
+            // Animace
+            const dragon = document.getElementById('main-dragon');
+            dragon.style.transform = 'scale(1.3)';
+            setTimeout(() => {
+                dragon.style.transform = 'scale(1)';
+            }, 300);
+        }
+
+        // Počítání
+        function playMath() {
+            if (!gameState.isAlive) return;
+            
+            const a = Math.floor(Math.random() * 10) + 1;
+            const b = Math.floor(Math.random() * 10) + 1;
+            const correct = a + b;
+            
+            const answer = prompt(`🧮 POČÍTÁNÍ!\n\n${a} + ${b} = ?`);
+            
+            if (parseInt(answer) === correct) {
+                alert('🎉 SPRÁVNĚ! +2 MINCE!');
+                gameState.coins += 2;
+                gameState.mood = Math.min(100, gameState.mood + 12);
+            } else {
+                alert(`❌ ŠPATNĚ!\nSprávná odpověď: ${correct}`);
+                gameState.mood = Math.max(0, gameState.mood - 8);
+            }
+            
+            updateDisplay();
+        }
+
+        // Nakrmit
+        function feedDragon() {
+            if (!gameState.isAlive) return;
+            
+            if (gameState.coins >= 8) {
+                gameState.coins -= 8;
+                gameState.hunger = Math.min(100, gameState.hunger + 35);
+                alert('🍖 NAKRMIL JSI DRÁČKA!');
+            } else {
+                alert('❌ NEMÁŠ DOST MINCÍ!\nPotřebuješ: 8🪙');
+            }
+            
+            updateDisplay();
+        }
+
+        // Napojit
+        function giveDrink() {
+            if (!gameState.isAlive) return;
+            
+            if (gameState.coins >= 5) {
+                gameState.coins -= 5;
+                gameState.thirst = Math.min(100, gameState.thirst + 40);
+                alert('💧 NAPOJIL JSI DRÁČKA!');
+            } else {
+                alert('❌ NEMÁŠ DOST MINCÍ!\nPotřebuješ: 5🪙');
+            }
+            
+            updateDisplay();
+        }
+
+        // Restart
+        function restartGame() {
+            if (confirm('🔄 OPRAVDU CHCEŠ ZAČÍT ZNOVU?')) {
+                if (gameState.gameTimer) {
+                    clearInterval(gameState.gameTimer);
+                }
+                
+                gameState = {
+                    dragonName: '',
+                    hunger: 100,
+                    thirst: 100,
+                    mood: 100,
+                    coins: 15,
+                    age: 0,
+                    isAlive: true,
+                    gameTimer: null
+                };
+                
+                document.getElementById('dragon-name').value = '';
+                document.getElementById('countdown').textContent = '3';
+                document.getElementById('countdown').style.color = '#e74c3c';
+                
+                showScreen('start-screen');
+            }
+        }
+
+        // Inicializace
+        console.log('🐉 Dragon Tamagotchi loaded successfully!');
+    </script>
 </body>
 </html>
