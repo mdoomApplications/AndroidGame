@@ -88,6 +88,7 @@
         .btn-feed { background: #27ae60; }
         .btn-drink { background: #2980b9; }
         .btn-math { background: #9b59b6; }
+        .btn-purple { background: #8e44ad; }
         .btn-restart { background: #e74c3c; }
         
         button:hover {
@@ -268,6 +269,7 @@
             <button class="btn-math" onclick="playMath()">POČÍTÁNÍ (+2🪙)</button>
             <button class="btn-feed" onclick="feedDragon()">NAKRMIT (-8🪙)</button>
             <button class="btn-drink" onclick="giveDrink()">NAPOJIT (-5🪙)</button>
+            <button class="btn-purple" onclick="talkWithDragon()">POVÍDÁNÍ 🎤</button>
             <button class="btn-restart" onclick="restartGame()">RESTART</button>
         </div>
         
@@ -502,8 +504,217 @@
             }
         }
 
+        // AI TTS a Speech Recognition
+        let recognition = null;
+        let speechSynthesis = window.speechSynthesis;
+        let isListening = false;
+        
+        // Gemini AI konfigurace
+        const GEMINI_API_KEY = 'YOUR_GEMINI_API_KEY_HERE'; // Nahraď svým API klíčem
+        const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+        
+        // Inicializace Speech Recognition
+        function initSpeechRecognition() {
+            if ('webkitSpeechRecognition' in window) {
+                recognition = new webkitSpeechRecognition();
+            } else if ('SpeechRecognition' in window) {
+                recognition = new SpeechRecognition();
+            } else {
+                console.log('Speech recognition not supported');
+                return false;
+            }
+            
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'cs-CZ';
+            
+            recognition.onresult = function(event) {
+                const transcript = event.results[0][0].transcript;
+                console.log('Heard:', transcript);
+                processSpeech(transcript);
+            };
+            
+            recognition.onerror = function(event) {
+                console.error('Speech recognition error:', event.error);
+                isListening = false;
+            };
+            
+            recognition.onend = function() {
+                isListening = false;
+            };
+            
+            return true;
+        }
+        
+        // Povídání s dráčkem
+        async function talkWithDragon() {
+            if (!gameState.isAlive) {
+                alert('💀 Mrtvý dráček nemůže mluvit!');
+                return;
+            }
+            
+            if (!recognition && !initSpeechRecognition()) {
+                // Fallback na text input
+                const userInput = prompt('💬 Co chceš říct dráčkovi?');
+                if (userInput) {
+                    await processSpeech(userInput);
+                }
+                return;
+            }
+            
+            if (isListening) {
+                recognition.stop();
+                isListening = false;
+                return;
+            }
+            
+            try {
+                recognition.start();
+                isListening = true;
+                
+                // Vizuální feedback
+                const dragon = document.getElementById('main-dragon');
+                dragon.style.background = '#e8f5e8';
+                dragon.style.border = '3px solid #27ae60';
+                dragon.style.borderRadius = '15px';
+                
+                setTimeout(() => {
+                    dragon.style.background = 'none';
+                    dragon.style.border = 'none';
+                }, 5000);
+                
+                alert('🎤 Poslouchám... Mluv k dráčkovi!');
+                
+            } catch (error) {
+                console.error('Error starting speech recognition:', error);
+                isListening = false;
+            }
+        }
+        
+        // Zpracování řeči
+        async function processSpeech(userText) {
+            if (!userText.trim()) return;
+            
+            // Zobrazení user zprávy
+            showMessage('👤 Ty: ' + userText, 'user');
+            
+            // Získání odpovědi od Gemini AI
+            const aiResponse = await getGeminiResponse(userText);
+            
+            // Zobrazení AI odpovědi
+            showMessage('🐉 ' + gameState.dragonName + ': ' + aiResponse, 'dragon');
+            
+            // TTS odpověď
+            speakText(aiResponse);
+            
+            // Vliv na náladu
+            gameState.mood = Math.min(100, gameState.mood + 5);
+            updateDisplay();
+        }
+        
+        // Volání Gemini AI
+        async function getGeminiResponse(userText) {
+            if (GEMINI_API_KEY === 'YOUR_GEMINI_API_KEY_HERE') {
+                // Fallback odpovědi bez API
+                const responses = [
+                    'Hrrr! Jsem tvůj dráček ' + gameState.dragonName + '! 🐉',
+                    'Mám hlad! Nakrm mě prosím! 🍖',
+                    'Hraju si rád! Děkuji za povídání! 😊',
+                    'Jsem mladý dráček, ale učím se! 📚',
+                    'Rád počítám! Dej mi nějaký příklad! 🧮',
+                    'Cítím se dobře když si se mnou povídáš! 💚'
+                ];
+                return responses[Math.floor(Math.random() * responses.length)];
+            }
+            
+            try {
+                const prompt = `
+                Jsi roztomilý dráček jménem ${gameState.dragonName}. 
+                Jsi virtuální mazlíček pro děti.
+                Tvoje statistiky: hlad ${Math.round(gameState.hunger)}%, žízeň ${Math.round(gameState.thirst)}%, nálada ${Math.round(gameState.mood)}%.
+                Věk: ${gameState.age} dní, mince: ${gameState.coins}.
+                
+                Odpověz krátce (max 2 věty), přátelsky a dětsky na: "${userText}"
+                
+                Používej emotikony a česky.
+                `;
+                
+                const response = await fetch(GEMINI_API_URL + '?key=' + GEMINI_API_KEY, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{
+                                text: prompt
+                            }]
+                        }]
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+                    return data.candidates[0].content.parts[0].text;
+                } else {
+                    throw new Error('Invalid response from Gemini');
+                }
+                
+            } catch (error) {
+                console.error('Gemini AI error:', error);
+                return 'Hrr... Nemohu teď mluvit. Zkus to později! 🐉';
+            }
+        }
+        
+        // Text-to-Speech
+        function speakText(text) {
+            if ('speechSynthesis' in window) {
+                // Zrušit předchozí řeč
+                speechSynthesis.cancel();
+                
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'cs-CZ';
+                utterance.rate = 0.9;
+                utterance.pitch = 1.2; // Vyšší hlas pro dráčka
+                utterance.volume = 0.8;
+                
+                speechSynthesis.speak(utterance);
+            }
+        }
+        
+        // Zobrazení zpráv
+        function showMessage(message, type) {
+            // Vytvoří floating zprávu
+            const messageDiv = document.createElement('div');
+            messageDiv.textContent = message;
+            messageDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: ${type === 'user' ? '#3498db' : '#27ae60'};
+                color: white;
+                padding: 10px 20px;
+                border-radius: 20px;
+                font-size: 14px;
+                z-index: 1000;
+                max-width: 300px;
+                text-align: center;
+                box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            `;
+            
+            document.body.appendChild(messageDiv);
+            
+            // Odstranit po 4 sekundách
+            setTimeout(() => {
+                document.body.removeChild(messageDiv);
+            }, 4000);
+        }
+        
         // Inicializace
         console.log('🐉 Dragon Tamagotchi loaded successfully!');
+        initSpeechRecognition();
     </script>
 </body>
 </html>
