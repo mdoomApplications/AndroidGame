@@ -91,6 +91,12 @@
         .btn-purple { background: #8e44ad; }
         .btn-restart { background: #e74c3c; }
         
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
         button:hover {
             transform: translateY(-3px);
             box-shadow: 0 5px 15px rgba(0,0,0,0.2);
@@ -264,12 +270,12 @@
                 </div>
             </div>
             
-            <div class="dragon" onclick="petDragon()" id="main-dragon">🐉</div>
+            <div class="dragon" id="main-dragon">🐉</div>
+            <p style="font-size: 12px; color: #666; margin-top: 5px;">Klikni pro pohladit • Drž pro mluvení 🎤</p>
             
             <button class="btn-math" onclick="playMath()">POČÍTÁNÍ (+2🪙)</button>
             <button class="btn-feed" onclick="feedDragon()">NAKRMIT (-8🪙)</button>
             <button class="btn-drink" onclick="giveDrink()">NAPOJIT (-5🪙)</button>
-            <button class="btn-purple" onclick="talkWithDragon()">POVÍDÁNÍ 🎤</button>
             <button class="btn-restart" onclick="restartGame()">RESTART</button>
         </div>
         
@@ -411,6 +417,175 @@
             }
         }
 
+        // Touch a Mouse eventy pro dráčka
+        let touchStartTime = 0;
+        let touchTimer = null;
+        let isDragging = false;
+        
+        // Inicializace touch eventů
+        function initDragonEvents() {
+            const dragon = document.getElementById('main-dragon');
+            if (!dragon) return;
+            
+            // Touch eventy (mobil)
+            dragon.addEventListener('touchstart', handleTouchStart, { passive: false });
+            dragon.addEventListener('touchend', handleTouchEnd, { passive: false });
+            dragon.addEventListener('touchmove', handleTouchMove, { passive: false });
+            
+            // Mouse eventy (desktop)
+            dragon.addEventListener('mousedown', handleMouseDown);
+            dragon.addEventListener('mouseup', handleMouseUp);
+            dragon.addEventListener('mouseleave', handleMouseUp);
+            dragon.addEventListener('mousemove', handleMouseMove);
+        }
+        
+        // Touch Start
+        function handleTouchStart(e) {
+            e.preventDefault();
+            touchStartTime = Date.now();
+            isDragging = false;
+            
+            // Vizuální feedback
+            const dragon = document.getElementById('main-dragon');
+            dragon.style.background = '#f0f8ff';
+            dragon.style.borderRadius = '15px';
+            
+            // Timer pro dlouhé držení (500ms)
+            touchTimer = setTimeout(() => {
+                if (!isDragging) {
+                    startListening();
+                }
+            }, 500);
+        }
+        
+        // Touch End
+        function handleTouchEnd(e) {
+            e.preventDefault();
+            const touchDuration = Date.now() - touchStartTime;
+            
+            clearTimeout(touchTimer);
+            
+            // Reset vizuálu
+            const dragon = document.getElementById('main-dragon');
+            dragon.style.background = 'none';
+            dragon.style.border = 'none';
+            
+            // Pokud bylo krátké kliknutí a nebylo drag
+            if (touchDuration < 500 && !isDragging) {
+                petDragon();
+            }
+            
+            // Pokud bylo dlouhé držení a mluvíme
+            if (isListening) {
+                stopListening();
+            }
+        }
+        
+        // Touch Move
+        function handleTouchMove(e) {
+            isDragging = true;
+            clearTimeout(touchTimer);
+        }
+        
+        // Mouse Down
+        function handleMouseDown(e) {
+            e.preventDefault();
+            touchStartTime = Date.now();
+            isDragging = false;
+            
+            // Vizuální feedback
+            const dragon = document.getElementById('main-dragon');
+            dragon.style.background = '#f0f8ff';
+            dragon.style.borderRadius = '15px';
+            
+            // Timer pro dlouhé držení (500ms)
+            touchTimer = setTimeout(() => {
+                if (!isDragging) {
+                    startListening();
+                }
+            }, 500);
+        }
+        
+        // Mouse Up
+        function handleMouseUp(e) {
+            const touchDuration = Date.now() - touchStartTime;
+            
+            clearTimeout(touchTimer);
+            
+            // Reset vizuálu
+            const dragon = document.getElementById('main-dragon');
+            dragon.style.background = 'none';
+            dragon.style.border = 'none';
+            
+            // Pokud bylo krátké kliknutí a nebylo drag
+            if (touchDuration < 500 && !isDragging) {
+                petDragon();
+            }
+            
+            // Pokud bylo dlouhé držení a mluvíme
+            if (isListening) {
+                stopListening();
+            }
+        }
+        
+        // Mouse Move
+        function handleMouseMove(e) {
+            if (touchStartTime > 0) {
+                isDragging = true;
+                clearTimeout(touchTimer);
+            }
+        }
+        
+        // Spuštění naslouchání
+        function startListening() {
+            if (!gameState.isAlive) {
+                showMessage('💀 Mrtvý dráček nemůže mluvit!', 'dragon');
+                return;
+            }
+            
+            if (!recognition && !initSpeechRecognition()) {
+                showMessage('🎤 Mikrofon není podporován', 'dragon');
+                return;
+            }
+            
+            if (isListening) return;
+            
+            try {
+                recognition.start();
+                isListening = true;
+                
+                // Vizuální feedback pro naslouchání
+                const dragon = document.getElementById('main-dragon');
+                dragon.style.background = '#e8f5e8';
+                dragon.style.border = '3px solid #27ae60';
+                dragon.style.borderRadius = '15px';
+                
+                // Pulsing efekt
+                dragon.style.animation = 'pulse 1s infinite';
+                
+                showMessage('🎤 Poslouchám...', 'dragon');
+                
+            } catch (error) {
+                console.error('Error starting speech recognition:', error);
+                showMessage('🎤 Chyba mikrofonu', 'dragon');
+                isListening = false;
+            }
+        }
+        
+        // Zastavení naslouchání
+        function stopListening() {
+            if (recognition && isListening) {
+                recognition.stop();
+                isListening = false;
+                
+                // Reset vizuálu
+                const dragon = document.getElementById('main-dragon');
+                dragon.style.background = 'none';
+                dragon.style.border = 'none';
+                dragon.style.animation = 'none';
+            }
+        }
+        
         // Pohladit dráčka
         function petDragon() {
             if (!gameState.isAlive) return;
@@ -424,6 +599,8 @@
             setTimeout(() => {
                 dragon.style.transform = 'scale(1)';
             }, 300);
+            
+            showMessage('🐉 Dráček je šťastný!', 'dragon');
         }
 
         // Počítání
@@ -546,49 +723,10 @@
             return true;
         }
         
-        // Povídání s dráčkem
+        // Povídání s dráčkem (už nepotřebné - nahrazeno touch eventy)
         async function talkWithDragon() {
-            if (!gameState.isAlive) {
-                alert('💀 Mrtvý dráček nemůže mluvit!');
-                return;
-            }
-            
-            if (!recognition && !initSpeechRecognition()) {
-                // Fallback na text input
-                const userInput = prompt('💬 Co chceš říct dráčkovi?');
-                if (userInput) {
-                    await processSpeech(userInput);
-                }
-                return;
-            }
-            
-            if (isListening) {
-                recognition.stop();
-                isListening = false;
-                return;
-            }
-            
-            try {
-                recognition.start();
-                isListening = true;
-                
-                // Vizuální feedback
-                const dragon = document.getElementById('main-dragon');
-                dragon.style.background = '#e8f5e8';
-                dragon.style.border = '3px solid #27ae60';
-                dragon.style.borderRadius = '15px';
-                
-                setTimeout(() => {
-                    dragon.style.background = 'none';
-                    dragon.style.border = 'none';
-                }, 5000);
-                
-                alert('🎤 Poslouchám... Mluv k dráčkovi!');
-                
-            } catch (error) {
-                console.error('Error starting speech recognition:', error);
-                isListening = false;
-            }
+            // Fallback pro starší kód
+            startListening();
         }
         
         // Zpracování řeči
@@ -715,6 +853,11 @@
         // Inicializace
         console.log('🐉 Dragon Tamagotchi loaded successfully!');
         initSpeechRecognition();
+        
+        // Inicializace touch eventů po načtení hry
+        setTimeout(() => {
+            initDragonEvents();
+        }, 1000);
     </script>
 </body>
 </html>

@@ -5,6 +5,8 @@ import '../providers/game_provider.dart';
 import '../utils/app_theme.dart';
 import '../widgets/stat_progress_bar.dart';
 import '../widgets/animated_dragon.dart';
+import '../services/ai_service.dart';
+import '../services/speech_service.dart';
 
 class MainGameScreen extends StatefulWidget {
   @override
@@ -15,6 +17,8 @@ class _MainGameScreenState extends State<MainGameScreen>
     with TickerProviderStateMixin {
   late AnimationController _dragonController;
   late Animation<double> _dragonAnimation;
+  bool _isListening = false;
+  int _touchStartTime = 0;
   
   @override
   void initState() {
@@ -34,6 +38,10 @@ class _MainGameScreenState extends State<MainGameScreen>
     ));
     
     _dragonController.repeat(reverse: true);
+    
+    // Inicializace řečových služeb
+    SpeechService.initializeTTS();
+    SpeechService.initializeSpeechRecognition();
   }
 
   @override
@@ -142,9 +150,18 @@ class _MainGameScreenState extends State<MainGameScreen>
                     
                     SizedBox(height: 20),
                     
-                    // Animovaný dráček
+                    // Animovaný dráček s touch ovládáním
                     GestureDetector(
-                      onTap: () => _petDragon(context, gameProvider),
+                      onTapDown: (details) {
+                        _touchStartTime = DateTime.now().millisecondsSinceEpoch;
+                      },
+                      onTapUp: (details) {
+                        final duration = DateTime.now().millisecondsSinceEpoch - _touchStartTime;
+                        if (duration < 500) {
+                          _petDragon(context, gameProvider);
+                        }
+                      },
+                      onLongPress: () => _startListening(context, gameProvider),
                       child: AnimatedBuilder(
                         animation: _dragonAnimation,
                         builder: (context, child) {
@@ -153,8 +170,13 @@ class _MainGameScreenState extends State<MainGameScreen>
                             child: Container(
                               padding: EdgeInsets.all(20),
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: _isListening 
+                                  ? Colors.green.withOpacity(0.3)
+                                  : Colors.white,
                                 borderRadius: BorderRadius.circular(20),
+                                border: _isListening 
+                                  ? Border.all(color: Colors.green, width: 3)
+                                  : null,
                                 boxShadow: [
                                   BoxShadow(
                                     color: Colors.black.withOpacity(0.1),
@@ -163,9 +185,22 @@ class _MainGameScreenState extends State<MainGameScreen>
                                   ),
                                 ],
                               ),
-                              child: Text(
-                                dragon.dragonEmoji,
-                                style: TextStyle(fontSize: 120),
+                              child: Column(
+                                children: [
+                                  Text(
+                                    dragon.dragonEmoji,
+                                    style: TextStyle(fontSize: 120),
+                                  ),
+                                  SizedBox(height: 10),
+                                  Text(
+                                    'Klikni pro pohladit • Drž pro mluvení 🎤',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
                               ),
                             ),
                           );
@@ -454,6 +489,62 @@ class _MainGameScreenState extends State<MainGameScreen>
             child: Text('ANO'),
           ),
         ],
+      ),
+    );
+  }
+
+  Future<void> _startListening(BuildContext context, GameProvider gameProvider) async {
+    if (!gameProvider.dragon!.isAlive) {
+      _showMessage(context, '💀 Mrtvý dráček nemůže mluvit!');
+      return;
+    }
+
+    setState(() {
+      _isListening = true;
+    });
+
+    _showMessage(context, '🎤 Poslouchám...');
+
+    try {
+      final userText = await SpeechService.startListening();
+      
+      if (userText != null && userText.isNotEmpty) {
+        _showMessage(context, '👤 Ty: $userText');
+        
+        final dragon = gameProvider.dragon!;
+        final stats = {
+          'hunger': dragon.hunger.round(),
+          'thirst': dragon.thirst.round(),
+          'mood': dragon.mood.round(),
+          'age': dragon.age,
+          'coins': dragon.coins,
+        };
+        
+        final aiResponse = await AIService.getGeminiResponse(userText, dragon.name, stats);
+        
+        _showMessage(context, '🐉 ${dragon.name}: $aiResponse');
+        await SpeechService.speak(aiResponse);
+        
+        // Zlepšení nálady za rozhovor
+        gameProvider.dragon!.mood = (gameProvider.dragon!.mood + 5).clamp(0, 100);
+        gameProvider.saveGame();
+      }
+    } catch (error) {
+      _showMessage(context, '🎤 Chyba mikrofonu');
+    } finally {
+      setState(() {
+        _isListening = false;
+      });
+    }
+  }
+
+  void _showMessage(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppTheme.primaryGreen,
+        behavior: SnackBarBehavior.floating,
+        duration: Duration(seconds: 2),
       ),
     );
   }
