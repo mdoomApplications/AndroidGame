@@ -550,11 +550,16 @@
             }
             
             if (!recognition && !initSpeechRecognition()) {
-                showMessage('🎤 Mikrofon není podporován', 'dragon');
+                showMessage('🎤 Mikrofon není podporován v tomto prohlížeči', 'dragon');
                 return;
             }
             
-            if (isListening) return;
+            if (isListening) {
+                console.log('Already listening, skipping...');
+                return;
+            }
+            
+            console.log('🎤 Attempting to start speech recognition...');
             
             try {
                 recognition.start();
@@ -569,12 +574,31 @@
                 // Pulsing efekt
                 dragon.style.animation = 'pulse 1s infinite';
                 
-                showMessage('🎤 Poslouchám...', 'dragon');
+                showMessage('🎤 Poslouchám... (Povolte mikrofon)', 'dragon');
+                console.log('✅ Speech recognition started successfully');
                 
             } catch (error) {
-                console.error('Error starting speech recognition:', error);
-                showMessage('🎤 Chyba mikrofonu', 'dragon');
+                console.error('❌ Error starting speech recognition:', error);
+                
+                let errorMsg = '🎤 Chyba mikrofonu: ';
+                if (error.message.includes('not-allowed')) {
+                    errorMsg += 'Povolte přístup k mikrofonu';
+                } else if (error.message.includes('no-speech')) {
+                    errorMsg += 'Žádná řeč nezaznamenaná';
+                } else if (error.message.includes('network')) {
+                    errorMsg += 'Problém se sítí';
+                } else {
+                    errorMsg += error.message || 'Neznámá chyba';
+                }
+                
+                showMessage(errorMsg, 'dragon');
                 isListening = false;
+                
+                // Reset vizuálu při chybě
+                const dragon = document.getElementById('main-dragon');
+                dragon.style.background = 'none';
+                dragon.style.border = 'none';
+                dragon.style.animation = 'none';
             }
         }
         
@@ -720,6 +744,36 @@
             recognition.onerror = function(event) {
                 console.error('Speech recognition error:', event.error);
                 isListening = false;
+                
+                // Reset vizuálu při chybě
+                const dragon = document.getElementById('main-dragon');
+                if (dragon) {
+                    dragon.style.background = 'none';
+                    dragon.style.border = 'none';
+                    dragon.style.animation = 'none';
+                }
+                
+                let errorMsg = '🎤 Chyba: ';
+                switch(event.error) {
+                    case 'not-allowed':
+                        errorMsg += 'Přístup k mikrofonu odepřen! Povolte mikrofon v nastavení prohlížeče.';
+                        break;
+                    case 'no-speech':
+                        errorMsg += 'Nic jste neřekli. Zkuste to znovu.';
+                        break;
+                    case 'audio-capture':
+                        errorMsg += 'Mikrofon není dostupný.';
+                        break;
+                    case 'network':
+                        errorMsg += 'Problém se sítí.';
+                        break;
+                    case 'service-not-allowed':
+                        errorMsg += 'Služba rozpoznávání řeči není povolena.';
+                        break;
+                    default:
+                        errorMsg += event.error;
+                }
+                showMessage(errorMsg, 'dragon');
             };
             
             recognition.onend = function() {
