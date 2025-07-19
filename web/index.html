@@ -356,6 +356,12 @@
             showScreen('game-screen');
             updateDisplay();
             startGameLoop();
+            
+            // Inicializace touch eventů až po zobrazení hlavní hry
+            setTimeout(() => {
+                initDragonEvents();
+                console.log('🎮 Touch events initialized for game screen');
+            }, 100);
         }
 
         // Herní smyčka
@@ -854,10 +860,8 @@
         console.log('🐉 Dragon Tamagotchi loaded successfully!');
         initSpeechRecognition();
         
-        // Inicializace touch eventů po načtení hry
-        setTimeout(() => {
-            initDragonEvents();
-        }, 1000);
+        // Debug: Touch events se inicializují až po vylíhnutí dráčka
+        console.log('💡 Touch events will be initialized when dragon hatches');
     </script>
 </body>
 </html>
